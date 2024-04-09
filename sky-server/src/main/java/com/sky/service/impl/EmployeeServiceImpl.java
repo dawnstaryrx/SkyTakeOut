@@ -1,16 +1,21 @@
 package com.sky.service.impl;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
 import com.sky.constant.MessageConstant;
 import com.sky.constant.PasswordConstant;
 import com.sky.constant.StatusConstant;
 import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
+import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.exception.AccountLockedException;
 import com.sky.exception.AccountNotFoundException;
 import com.sky.exception.PasswordErrorException;
 import com.sky.mapper.EmployeeMapper;
+import com.sky.result.PageResult;
 import com.sky.service.EmployeeService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +24,7 @@ import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class EmployeeServiceImpl implements EmployeeService {
@@ -61,6 +67,77 @@ public class EmployeeServiceImpl implements EmployeeService {
         return employee;
     }
 
+    /**
+     * 分页查询
+     * @param employeePageQueryDTO
+     * @return
+     */
+    @Override
+    public PageResult pageQuery(EmployeePageQueryDTO employeePageQueryDTO) {
+        // 开始分页查询
+        PageHelper.startPage(employeePageQueryDTO.getPage(), employeePageQueryDTO.getPageSize());
+        Page<Employee> page = employeeMapper.pageQuery(employeePageQueryDTO);
+        long total = page.getTotal();
+        List<Employee> records = page.getResult();
+        return new PageResult(total, records);
+    }
+
+    @Override
+    public Employee getInfoById(Long id) {
+        Employee employee = employeeMapper.getInfoById(id);
+        return employee;
+    }
+
+    @Override
+    public void resetPwd(PasswordEditDTO passwordEditDTO) {
+        passwordEditDTO.setEmpId(BaseContext.getCurrentId());
+        // 旧密码是否正确
+        Employee employeeDTO = getInfoById(passwordEditDTO.getEmpId());
+        if (!employeeDTO.getPassword().equals(passwordEditDTO.getOldPassword())){
+            throw new PasswordErrorException(MessageConstant.PASSWORD_ERROR);
+        }
+        LocalDateTime updateTime = LocalDateTime.now();
+        Employee employee = Employee.builder()
+                .id(passwordEditDTO.getEmpId())
+                .password(passwordEditDTO.getNewPassword())
+                .updateTime(updateTime)
+                .updateUser(BaseContext.getCurrentId())
+                .build();
+        employeeMapper.update(employee);
+    }
+
+    @Override
+    public void updateEmployee(EmployeeDTO employeeDTO) {
+        LocalDateTime updateTime = LocalDateTime.now();
+        Employee employee = Employee.builder()
+                .id(employeeDTO.getId())
+                .username(employeeDTO.getUsername())
+                .name(employeeDTO.getName())
+                .phone(employeeDTO.getPhone())
+                .sex(employeeDTO.getSex())
+                .idNumber(employeeDTO.getIdNumber())
+                .updateTime(updateTime)
+                .updateUser(BaseContext.getCurrentId())
+                .build();
+        employeeMapper.update(employee);
+    }
+
+    @Override
+    public void changeStatus(Long id, Integer status) {
+//        employeeMapper.changeStatus(id, status);
+//        Employee employee = new Employee();
+//        employee.setStatus(status);
+//        employee.setId(id);
+        LocalDateTime updateTime = LocalDateTime.now();
+        Employee employee = Employee.builder()
+                            .status(status)
+                            .id(id)
+                            .updateTime(updateTime)
+                            .updateUser(BaseContext.getCurrentId())
+                            .build();
+        employeeMapper.update(employee);
+    }
+
     @Override
     public void save(EmployeeDTO employeeDTO) {
         Employee employee = new Employee();
@@ -72,7 +149,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setStatus(StatusConstant.ENABLE);
         employee.setCreateTime(LocalDateTime.now());
         employee.setUpdateTime(LocalDateTime.now());
-        employee.setCreateUser(BaseContext.getCurrentId()); 
+        employee.setCreateUser(BaseContext.getCurrentId());
         employee.setUpdateUser(BaseContext.getCurrentId());
         employee.setPassword(DigestUtils.md5DigestAsHex(PasswordConstant.DEFAULT_PASSWORD.getBytes()));
 
