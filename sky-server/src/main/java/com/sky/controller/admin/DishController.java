@@ -2,14 +2,15 @@ package com.sky.controller.admin;
 
 import com.sky.dto.DishDTO;
 import com.sky.dto.DishPageQueryDTO;
+import com.sky.entity.Dish;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.DishService;
+import com.sky.vo.DishVO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * ClassName: DishController
@@ -32,10 +33,39 @@ public class DishController {
         return Result.success(pageResult);
     }
 
-    @PostMapping("")
-    public Result<String> add(DishDTO dishDTO){
+    @PostMapping
+    public Result add(@RequestBody DishDTO dishDTO){
         dishService.add(dishDTO);
         return Result.success();
     }
 
+    @GetMapping("/{id}")
+    public Result<DishVO> searchById(@PathVariable Long id){
+        DishVO dishVO = dishService.searchById(id);
+        return Result.success(dishVO);
+    }
+
+    @GetMapping("/list")
+    public Result<List<Dish>> searchByCategoryId(Long cateogryId){
+        List<Dish> dishes = dishService.searchByCategoryId(cateogryId);
+        return Result.success(dishes);
+    }
+
+    @PutMapping
+    public Result update(@RequestBody DishDTO dishDTO){
+        dishService.update(dishDTO);
+        return Result.success();
+    }
+
+    @PostMapping("/status/{status}")
+    public Result updateStatus(@PathVariable Integer status, Long id){
+        dishService.updateStatus(status, id);
+        return Result.success();
+    }
+
+    @DeleteMapping
+    public Result delete(@RequestParam List<Long> ids){
+        dishService.delete(ids);
+        return Result.success();
+    }
 }
