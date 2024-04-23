@@ -8,9 +8,11 @@ import com.sky.result.Result;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * ClassName: DishController
@@ -26,6 +28,8 @@ import java.util.List;
 public class DishController {
     @Autowired
     private DishService dishService;
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @GetMapping("/page")
     public Result<PageResult> page(DishPageQueryDTO dishPageQueryDTO){
@@ -36,6 +40,9 @@ public class DishController {
     @PostMapping
     public Result add(@RequestBody DishDTO dishDTO){
         dishService.add(dishDTO);
+        // 清理缓存数据
+        String key = "dish_"+dishDTO.getCategoryId();
+        redisTemplate.delete(key);
         return Result.success();
     }
 
@@ -54,18 +61,29 @@ public class DishController {
     @PutMapping
     public Result update(@RequestBody DishDTO dishDTO){
         dishService.update(dishDTO);
+        // 将所有缓存数据删除
+        cleanCache("dish_*");
         return Result.success();
     }
 
     @PostMapping("/status/{status}")
     public Result updateStatus(@PathVariable Integer status, Long id){
         dishService.updateStatus(status, id);
+        // 将所有缓存数据删除
+        cleanCache("dish_*");
         return Result.success();
     }
 
     @DeleteMapping
     public Result delete(@RequestParam List<Long> ids){
         dishService.delete(ids);
+        // 将所有缓存数据删除
+        cleanCache("dish_*");
         return Result.success();
+    }
+
+    private void cleanCache(String pattern){
+        Set keys = redisTemplate.keys(pattern);
+        redisTemplate.delete(keys);
     }
 }
